@@ -189,6 +189,8 @@ aside {
 @media (max-width: 860px) {
   main {
     flex-direction: column;
+    /* Con flex-start il tavolo prenderebbe la larghezza della mano e si stringerebbe a ogni carta giocata. */
+    align-items: stretch;
   }
   aside {
     width: 100%;
