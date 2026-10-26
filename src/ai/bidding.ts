@@ -78,6 +78,7 @@ export function buildBidTable(
           tricksDone: 0,
           points: [0, 0, 0, 0, 0],
           tricksWon: [0, 0, 0, 0, 0],
+          evidence: [1, 1, 1, 1, 1],
         };
         rollout(s, prm.policy, rand);
         points[rank * 4 + suit][i] = callerTeamPoints(s);

@@ -1,6 +1,7 @@
 import { NUM_PLAYERS, pointsOf, rankOf, suitOf } from '../engine/cards';
 import { beats } from '../engine/trick';
 import { scoreDeltas } from '../engine/scoring';
+import { updateEvidence } from './evidence';
 
 /**
  * Stato di simulazione compatto e mutabile, usato dall'IA per giocare migliaia di
@@ -26,6 +27,8 @@ export interface SimState {
   tricksDone: number;
   points: number[];
   tricksWon: number[];
+  /** Pesi pubblici di ciascun giocatore come possibile compagno (vedi evidence.ts). */
+  evidence: number[];
 }
 
 export function cloneSim(s: SimState): SimState {
@@ -45,6 +48,7 @@ export function cloneSim(s: SimState): SimState {
     tricksDone: s.tricksDone,
     points: s.points.slice(),
     tricksWon: s.tricksWon.slice(),
+    evidence: s.evidence.slice(),
   };
 }
 
@@ -56,6 +60,16 @@ export function simPlay(s: SimState, card: number): void {
   h[i] = h[h.length - 1];
   h.pop();
   s.gone[suitOf(card)] |= 1 << rankOf(card);
+  const n = s.trickCards.length;
+  if (n > 0 && !s.revealed) {
+    let wk = 0;
+    let table = pointsOf(s.trickCards[0]);
+    for (let k = 1; k < n; k++) {
+      table += pointsOf(s.trickCards[k]);
+      if (beats(s.trickCards[k], s.trickCards[wk], s.trump)) wk = k;
+    }
+    updateEvidence(s.evidence, s.caller, s.trump, s.trickPlayers[wk], s.trickCards[wk], table, p, card);
+  }
   s.trickCards.push(card);
   s.trickPlayers.push(p);
   if (card === s.calledCard) s.revealed = true;

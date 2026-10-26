@@ -23,16 +23,19 @@ export interface HeuristicParams {
   soloPrior: number;
   /** Rumore casuale aggiunto alle valutazioni (diversifica le simulazioni). */
   noise: number;
+  /** 1 = usa le deduzioni pubbliche su chi è il compagno, 0 = probabilità uniformi. */
+  useEvidence: number;
 }
 
 export const DEFAULT_HEURISTIC: HeuristicParams = {
   trumpBase: 4,
-  trumpRank: 0.9,
+  trumpRank: 1.7,
   sideRank: 0.2,
-  revealPenalty: 4,
+  revealPenalty: 0,
   loadCaution: 0.15,
   soloPrior: 0.1,
   noise: 0,
+  useEvidence: 1,
 };
 
 const POP = new Uint8Array(1024);
@@ -43,15 +46,36 @@ const unseen = [0, 0, 0, 0];
 const later: number[] = [];
 
 /** Probabilità, dal punto di vista di `me`, che `q` sia suo alleato. */
-export function allyProbs(s: SimState, me: number, soloPrior: number, out: Float64Array = ally): Float64Array {
+export function allyProbs(
+  s: SimState,
+  me: number,
+  soloPrior: number,
+  useEvidence = true,
+  out: Float64Array = ally,
+): Float64Array {
   const known = s.revealed || s.partner === me;
-  const myTeam = inCallerTeam(s, me);
+  if (known) {
+    const myTeam = inCallerTeam(s, me);
+    for (let q = 0; q < NUM_PLAYERS; q++) out[q] = q === me || inCallerTeam(s, q) === myTeam ? 1 : 0;
+    return out;
+  }
+  // Peso di ciascun giocatore come possibile compagno; per chi non è il chiamante,
+  // anche il chiamante stesso può avere la carta chiamata (gioca da solo).
+  const caller = s.caller;
+  let tot = 0;
   for (let q = 0; q < NUM_PLAYERS; q++) {
+    let w: number;
+    if (q === me || s.hands[q].length === 0) w = 0;
+    else if (q === caller) w = soloPrior / ((1 - soloPrior) / 3);
+    else w = useEvidence ? s.evidence[q] : 1;
+    out[q] = w;
+    tot += w;
+  }
+  for (let q = 0; q < NUM_PLAYERS; q++) {
+    const pPartner = tot > 0 ? out[q] / tot : 0;
     if (q === me) out[q] = 1;
-    else if (known) out[q] = inCallerTeam(s, q) === myTeam ? 1 : 0;
-    else if (me === s.caller) out[q] = 0.25;
-    else if (q === s.caller) out[q] = 0;
-    else out[q] = 1 - (1 - soloPrior) / 3;
+    else if (me === caller) out[q] = pPartner;
+    else out[q] = q === caller ? 0 : 1 - pPartner;
   }
   return out;
 }
@@ -66,7 +90,7 @@ export function heuristicCard(
   const hand = s.hands[p];
   if (hand.length === 1) return hand[0];
   const trump = s.trump;
-  const al = allyOverride ?? allyProbs(s, p, prm.soloPrior);
+  const al = allyOverride ?? allyProbs(s, p, prm.soloPrior, prm.useEvidence > 0);
 
   for (let su = 0; su < 4; su++) unseen[su] = ~s.gone[su] & 0x3ff;
   for (const c of hand) unseen[suitOf(c)] &= ~(1 << rankOf(c));

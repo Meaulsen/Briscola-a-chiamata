@@ -1,37 +1,50 @@
-import { type Card, NUM_PLAYERS, isCarico, pointsOf, rankOf, suitOf } from '../engine/cards';
+import { type Card, NUM_PLAYERS, pointsOf, rankOf, suitOf } from '../engine/cards';
 import { playedCards } from '../engine/hand';
 import { shuffle } from '../engine/rng';
 import { beats } from '../engine/trick';
 import type { PlayerView } from '../engine/view';
+import { DEFAULT_EVIDENCE, type EvidenceParams, updateEvidence } from './evidence';
 import type { SimState } from './sim';
 
 /**
  * Campionamento dei "mondi" possibili (determinizzazioni) coerenti con quanto sa un
  * giocatore, con inferenza su chi sia il compagno e sulla mano del chiamante.
  */
-export interface InferenceParams {
+export interface InferenceParams extends EvidenceParams {
   soloPrior: number;
   /** Peso esponenziale per ogni briscola in più (rispetto a 2) nella mano iniziale del chiamante. */
   callerTrumpBias: number;
-  /** Rapporti di verosimiglianza per i comportamenti osservati. */
-  lrLoadCaller: number;
-  lrSmallLoadCaller: number;
-  lrTrumpOverCaller: number;
-  lrLoadOther: number;
-  lrCallerLoads: number;
-  lrCallerOvertakes: number;
 }
 
 export const DEFAULT_INFERENCE: InferenceParams = {
+  ...DEFAULT_EVIDENCE,
   soloPrior: 0.1,
   callerTrumpBias: 0.6,
-  lrLoadCaller: 3,
-  lrSmallLoadCaller: 1.3,
-  lrTrumpOverCaller: 0.5,
-  lrLoadOther: 0.4,
-  lrCallerLoads: 3,
-  lrCallerOvertakes: 0.6,
 };
+
+/** Pesi pubblici (uguali per tutti gli osservatori) di ciascun giocatore come possibile compagno. */
+export function publicEvidence(v: PlayerView, prm: EvidenceParams = DEFAULT_EVIDENCE): number[] {
+  const ev = Array(NUM_PLAYERS).fill(1);
+  const trump = v.trump!;
+  const caller = v.caller!;
+  const tricks = [...v.tricks, ...(v.current ? [v.current] : [])];
+  let revealed = false;
+  for (const t of tricks) {
+    let wCard = -1;
+    let wPlayer = -1;
+    let table = 0;
+    t.plays.forEach(({ player, card }, k) => {
+      if (k > 0 && !revealed) updateEvidence(ev, caller, trump, wPlayer, wCard, table, player, card, prm);
+      if (card === v.calledCard) revealed = true;
+      if (k === 0 || beats(card, wCard, trump)) {
+        wCard = card;
+        wPlayer = player;
+      }
+      table += pointsOf(card);
+    });
+  }
+  return ev;
+}
 
 /**
  * Peso relativo di ciascun giocatore come possibile detentore della carta chiamata,
@@ -49,36 +62,8 @@ export function partnerWeights(v: PlayerView, prm: InferenceParams = DEFAULT_INF
     if (q === caller) w[q] = v.me === caller ? 0 : prm.soloPrior / ((1 - prm.soloPrior) / 3);
     else w[q] = 1;
   }
-  const trump = v.trump!;
-  const tricks = [...v.tricks, ...(v.current ? [v.current] : [])];
-  for (const t of tricks) {
-    let wCard = -1;
-    let wPlayer = -1;
-    let table = 0;
-    t.plays.forEach(({ player: q, card }, k) => {
-      if (k > 0) {
-        const pts = pointsOf(card);
-        const took = beats(card, wCard, trump);
-        if (q !== caller) {
-          if (wPlayer === caller) {
-            if (!took && isCarico(card)) w[q] *= prm.lrLoadCaller;
-            else if (!took && pts >= 2) w[q] *= prm.lrSmallLoadCaller;
-            else if (took && suitOf(card) === trump && table + pts >= 10) w[q] *= prm.lrTrumpOverCaller;
-          } else if (!took && isCarico(card)) {
-            w[q] *= prm.lrLoadOther;
-          }
-        } else if (wPlayer !== caller) {
-          if (!took && isCarico(card)) w[wPlayer] *= prm.lrCallerLoads;
-          else if (took && table >= 10) w[wPlayer] *= prm.lrCallerOvertakes;
-        }
-      }
-      if (k === 0 || beats(card, wCard, trump)) {
-        wCard = card;
-        wPlayer = q;
-      }
-      table += pointsOf(card);
-    });
-  }
+  const ev = publicEvidence(v, prm);
+  for (let q = 0; q < NUM_PLAYERS; q++) if (q !== caller) w[q] *= ev[q];
   // La carta chiamata non ancora uscita non può essere in mano a chi ha finito le carte.
   for (let q = 0; q < NUM_PLAYERS; q++) if (v.handSizes[q] === 0) w[q] = 0;
   return w;
@@ -164,5 +149,6 @@ export function simFromView(v: PlayerView, hands: Card[][], partner: number): Si
     tricksDone: v.tricks.length,
     points: v.points.slice(),
     tricksWon: v.tricksWon.slice(),
+    evidence: publicEvidence(v),
   };
 }
