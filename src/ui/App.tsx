@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { newMatch } from '../engine/match';
 import { randomSeed } from '../engine/rng';
 import { viewFor } from '../engine/view';
 import { LastTrick, PlayedPanel, PointsPanel } from './Aids';
 import { HistoryView } from './HistoryView';
+import { CardStyleContext } from './CardView';
 import { AuctionLog, AuctionPanel, InfoBar, TrumpPicker, WaitingPanel } from './Panels';
 import { Setup } from './Setup';
 import { FinalStandings, HandSummary, History } from './Summary';
@@ -26,12 +27,11 @@ export function App() {
     saveSettings(s);
   };
 
+  let content: ReactNode;
   if (screen.kind === 'history') {
-    return <HistoryView initialMatchId={screen.matchId} onBack={() => setScreen({ kind: 'setup' })} />;
-  }
-
-  if (screen.kind === 'setup') {
-    return (
+    content = <HistoryView initialMatchId={screen.matchId} onBack={() => setScreen({ kind: 'setup' })} />;
+  } else if (screen.kind === 'setup') {
+    content = (
       <Setup
         initial={settings}
         canResume={saved !== null}
@@ -48,24 +48,26 @@ export function App() {
         }}
       />
     );
+  } else {
+    content = (
+      <Game
+        key={gameKey}
+        initial={screen.session}
+        settings={settings}
+        onSettings={updateSettings}
+        onExit={(s) => {
+          setSaved(s.match.finished ? null : s);
+          setScreen({ kind: 'setup' });
+        }}
+        onAnalyze={(id) => {
+          setSaved(null);
+          setScreen({ kind: 'history', matchId: id });
+        }}
+      />
+    );
   }
 
-  return (
-    <Game
-      key={gameKey}
-      initial={screen.session}
-      settings={settings}
-      onSettings={updateSettings}
-      onExit={(s) => {
-        setSaved(s.match.finished ? null : s);
-        setScreen({ kind: 'setup' });
-      }}
-      onAnalyze={(id) => {
-        setSaved(null);
-        setScreen({ kind: 'history', matchId: id });
-      }}
-    />
-  );
+  return <CardStyleContext.Provider value={settings.cardStyle}>{content}</CardStyleContext.Provider>;
 }
 
 function Game({ initial, settings, onSettings, onExit, onAnalyze }: {
@@ -105,6 +107,14 @@ function Game({ initial, settings, onSettings, onExit, onAnalyze }: {
           <label className="check">
             <input type="checkbox" checked={settings.showPoints} onChange={(e) => onSettings({ ...settings, showPoints: e.target.checked })} />
             Punti
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={settings.cardStyle === 'piacentine'}
+              onChange={(e) => onSettings({ ...settings, cardStyle: e.target.checked ? 'piacentine' : 'testo' })}
+            />
+            Piacentine
           </label>
           <button type="button" className="secondary" onClick={() => onExit(session)}>
             Menu

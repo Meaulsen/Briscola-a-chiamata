@@ -54,6 +54,13 @@ export function Setup({ initial, canResume, onStart, onResume, onHistory }: {
             <option value="veloce">Veloce</option>
           </select>
         </label>
+        <label>
+          Carte
+          <select value={s.cardStyle} onChange={(e) => set('cardStyle', e.target.value as Settings['cardStyle'])}>
+            <option value="piacentine">Immagini piacentine</option>
+            <option value="testo">Nome del valore e del seme</option>
+          </select>
+        </label>
         <fieldset>
           <legend>Aiuti (si possono cambiare anche durante la partita)</legend>
           <label className="check">
