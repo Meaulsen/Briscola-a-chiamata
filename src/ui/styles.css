@@ -570,3 +570,106 @@ table.played tr.trump-row th::after {
     gap: 4px;
   }
 }
+
+/* ---------- Storico ---------- */
+.history-link {
+  width: 100%;
+  margin-top: 12px;
+}
+.history-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 16px 24px;
+}
+.history-head {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.score-table td.actions {
+  white-space: nowrap;
+}
+.score-table td.actions button + button {
+  margin-left: 6px;
+}
+.winner {
+  font-weight: 700;
+}
+.score-table tr.current,
+.auction-list li.current {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.replay h2 {
+  margin: 10px 0 4px;
+}
+.replay > .aid {
+  margin-top: 12px;
+}
+.replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.replay-controls input[type='range'] {
+  flex: 1 1 160px;
+}
+.replay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: start;
+}
+.replay-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 860px) {
+  .replay-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.replay-hand {
+  margin-bottom: 8px;
+}
+.replay-hand .cards,
+.trick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.replay-name {
+  margin-bottom: 2px;
+}
+.tag.dark {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  margin-left: 4px;
+}
+.gone .card {
+  opacity: 0.25;
+}
+.auction-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+}
+button.link {
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+button.link:hover {
+  text-decoration: underline;
+}

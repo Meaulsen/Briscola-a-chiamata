@@ -1,5 +1,6 @@
 import type { BotLevel } from '../ai/bot';
 import type { MatchState } from '../engine/match';
+import { type HandNotes, type MatchRecord, emptyNotes, newMatchRecord } from '../history/record';
 
 export type Speed = 'lenta' | 'normale' | 'veloce';
 
@@ -23,7 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const SETTINGS_KEY = 'briscola-chiamata:settings';
 const MATCH_KEY = 'briscola-chiamata:match';
-const VERSION = 1;
+const VERSION = 2;
 
 function read<T>(key: string): T | null {
   try {
@@ -49,11 +50,22 @@ export function loadSettings(): Settings {
 
 export const saveSettings = (s: Settings): void => write(SETTINGS_KEY, s);
 
-export function loadMatch(): MatchState | null {
-  const saved = read<{ v: number; match: MatchState }>(MATCH_KEY);
-  return saved && saved.v === VERSION && !saved.match.finished ? saved.match : null;
+/** Partita in corso: stato del motore, storico delle mani concluse e note dei bot sulla mano corrente. */
+export interface GameSession {
+  match: MatchState;
+  record: MatchRecord;
+  notes: HandNotes;
 }
 
-export function saveMatch(m: MatchState | null): void {
-  write(MATCH_KEY, m && !m.finished ? { v: VERSION, match: m } : null);
+export function newSession(match: MatchState, level: BotLevel): GameSession {
+  return { match, record: newMatchRecord(match, level, Date.now()), notes: emptyNotes() };
+}
+
+export function loadSession(): GameSession | null {
+  const saved = read<{ v: number; session: GameSession }>(MATCH_KEY);
+  return saved && saved.v === VERSION && !saved.session.match.finished ? saved.session : null;
+}
+
+export function saveSession(s: GameSession | null): void {
+  write(MATCH_KEY, s && !s.match.finished ? { v: VERSION, session: s } : null);
 }

@@ -1,21 +1,24 @@
 import { useState } from 'react';
-import { type MatchState, newMatch } from '../engine/match';
+import { newMatch } from '../engine/match';
 import { randomSeed } from '../engine/rng';
 import { viewFor } from '../engine/view';
 import { LastTrick, PlayedPanel, PointsPanel } from './Aids';
+import { HistoryView } from './HistoryView';
 import { AuctionLog, AuctionPanel, InfoBar, TrumpPicker, WaitingPanel } from './Panels';
 import { Setup } from './Setup';
 import { FinalStandings, HandSummary, History } from './Summary';
 import { Table } from './Table';
-import { type Settings, loadMatch, loadSettings, saveMatch, saveSettings } from './storage';
+import { type GameSession, type Settings, loadSession, loadSettings, newSession, saveSession, saveSettings } from './storage';
 import { HUMAN, useGame } from './useGame';
 
 const BOT_NAMES = ['Bruno', 'Carla', 'Dario', 'Elena'];
 
+type Screen = { kind: 'setup' } | { kind: 'game'; session: GameSession } | { kind: 'history'; matchId: string | null };
+
 export function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings);
-  const [match, setMatch] = useState<MatchState | null>(null);
-  const [saved, setSaved] = useState<MatchState | null>(loadMatch);
+  const [screen, setScreen] = useState<Screen>({ kind: 'setup' });
+  const [saved, setSaved] = useState<GameSession | null>(loadSession);
   const [gameKey, setGameKey] = useState(0);
 
   const updateSettings = (s: Settings) => {
@@ -23,17 +26,24 @@ export function App() {
     saveSettings(s);
   };
 
-  if (!match) {
+  if (screen.kind === 'history') {
+    return <HistoryView initialMatchId={screen.matchId} onBack={() => setScreen({ kind: 'setup' })} />;
+  }
+
+  if (screen.kind === 'setup') {
     return (
       <Setup
         initial={settings}
         canResume={saved !== null}
-        onResume={() => setMatch(saved)}
+        onResume={() => saved && setScreen({ kind: 'game', session: saved })}
+        onHistory={() => setScreen({ kind: 'history', matchId: null })}
         onStart={(s) => {
           updateSettings(s);
           const names = [s.name, ...BOT_NAMES.filter((n) => n.toLowerCase() !== s.name.toLowerCase())].slice(0, 5);
           if (names.length < 5) names.push('Anna');
-          setMatch(newMatch({ numHands: s.numHands, names, seed: randomSeed() }));
+          const seed = randomSeed();
+          const match = newMatch({ id: `${Date.now().toString(36)}-${seed.toString(36)}`, numHands: s.numHands, names, seed });
+          setScreen({ kind: 'game', session: newSession(match, s.level) });
           setGameKey((k) => k + 1);
         }}
       />
@@ -43,24 +53,33 @@ export function App() {
   return (
     <Game
       key={gameKey}
-      initial={match}
+      initial={screen.session}
       settings={settings}
       onSettings={updateSettings}
-      onExit={(m) => {
-        setSaved(m.finished ? null : m);
-        setMatch(null);
+      onExit={(s) => {
+        setSaved(s.match.finished ? null : s);
+        setScreen({ kind: 'setup' });
+      }}
+      onAnalyze={(id) => {
+        setSaved(null);
+        setScreen({ kind: 'history', matchId: id });
       }}
     />
   );
 }
 
-function Game({ initial, settings, onSettings, onExit }: {
-  initial: MatchState;
+function Game({ initial, settings, onSettings, onExit, onAnalyze }: {
+  initial: GameSession;
   settings: Settings;
   onSettings: (s: Settings) => void;
-  onExit: (m: MatchState) => void;
+  onExit: (s: GameSession) => void;
+  onAnalyze: (matchId: string) => void;
 }) {
-  const { match, holdTrick, error, dispatch, nextHand, releaseTrick } = useGame(initial, settings.level, settings.speed);
+  const { session, match, holdTrick, error, historyError, dispatch, nextHand, releaseTrick } = useGame(
+    initial,
+    initial.record.level,
+    settings.speed,
+  );
   const [side, setSide] = useState<'none' | 'last' | 'history'>('none');
   const hand = match.hand;
   const names = match.config.names;
@@ -87,13 +106,14 @@ function Game({ initial, settings, onSettings, onExit }: {
             <input type="checkbox" checked={settings.showPoints} onChange={(e) => onSettings({ ...settings, showPoints: e.target.checked })} />
             Punti
           </label>
-          <button type="button" className="secondary" onClick={() => onExit(match)}>
+          <button type="button" className="secondary" onClick={() => onExit(session)}>
             Menu
           </button>
         </nav>
       </header>
 
       {error && <div className="error">Errore: {error}</div>}
+      {historyError && <div className="error">{historyError}</div>}
 
       <main>
         <section className="board">
@@ -142,9 +162,10 @@ function Game({ initial, settings, onSettings, onExit }: {
         <FinalStandings
           match={match}
           onNew={() => {
-            saveMatch(null);
-            onExit(match);
+            saveSession(null);
+            onExit(session);
           }}
+          onAnalyze={() => onAnalyze(session.record.id)}
         />
       )}
     </div>

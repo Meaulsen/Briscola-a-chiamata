@@ -66,7 +66,11 @@ export function HandSummary({ hand, match, onNext }: { hand: HandState; match: M
   );
 }
 
-export function FinalStandings({ match, onNew }: { match: MatchState; onNew: () => void }) {
+export function FinalStandings({ match, onNew, onAnalyze }: {
+  match: MatchState;
+  onNew: () => void;
+  onAnalyze: () => void;
+}) {
   const names = match.config.names;
   const winners = matchWinners(match);
   const order = standings(match.scores);
@@ -92,9 +96,14 @@ export function FinalStandings({ match, onNew }: { match: MatchState; onNew: () 
             ))}
           </tbody>
         </table>
-        <button type="button" onClick={onNew}>
-          Nuova partita
-        </button>
+        <div className="buttons">
+          <button type="button" onClick={onNew}>
+            Nuova partita
+          </button>
+          <button type="button" className="secondary" onClick={onAnalyze}>
+            Analizza la partita
+          </button>
+        </div>
       </div>
     </div>
   );
