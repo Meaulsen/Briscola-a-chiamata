@@ -1,4 +1,5 @@
 import type { BotLevel } from '../ai/bot';
+import type { CardStyle } from './CardView';
 import type { MatchState } from '../engine/match';
 import { type HandNotes, type MatchRecord, emptyNotes, newMatchRecord } from '../history/record';
 
@@ -11,6 +12,7 @@ export interface Settings {
   speed: Speed;
   showPlayed: boolean;
   showPoints: boolean;
+  cardStyle: CardStyle;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -20,6 +22,7 @@ export const DEFAULT_SETTINGS: Settings = {
   speed: 'normale',
   showPlayed: false,
   showPoints: false,
+  cardStyle: 'piacentine',
 };
 
 const SETTINGS_KEY = 'briscola-chiamata:settings';

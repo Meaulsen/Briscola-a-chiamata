@@ -6,7 +6,8 @@ telefono, senza installare niente e senza server.
 
 ## Come si gioca
 
-1. Scegli il nome, il numero di mani (5, 10, 15 o 20), la forza dei bot, la velocità e gli aiuti.
+1. Scegli il nome, il numero di mani (5, 10, 15 o 20), la forza dei bot, la velocità, l'aspetto delle
+   carte e gli aiuti.
 2. **Asta**: quando tocca a te chiami un valore (Asso, Tre, Re, …) o passi. Ogni chiamata deve essere
    più bassa della precedente. Dopo il Due si rilancia sui punti (“Due a 62”, “Due a 70”…, fino a 120).
 3. Se vinci l'asta scegli il **seme di briscola**: la carta chiamata è il valore detto in asta di quel
@@ -34,6 +35,21 @@ punti, esito e classifica progressiva; ogni mano si può ripercorrere passo pass
 Lo storico è salvato in **IndexedDB**, il database integrato nel browser: resta sul dispositivo, non
 viene inviato a nessun server e si perde cancellando i dati del sito. Le mani annullate perché tutti
 hanno passato compaiono nello storico ma non contano nel punteggio.
+
+### Aspetto delle carte
+
+Le carte si possono mostrare in due modi, a scelta nel menu iniziale o con la casella **Piacentine**
+durante la partita:
+
+- **Immagini piacentine** (predefinito): i disegni del mazzo piacentino, con figure a doppia testa e
+  senza indici negli angoli, come le carte vere;
+- **Nome del valore e del seme**: solo testo (“A · Asso · Coppe”), colorato per seme.
+
+In entrambi i casi le carte di briscola hanno il bordo del colore del seme. Le immagini sono file SVG
+in [`public/carte/piacentine/`](public/carte/piacentine) (`coppe-1.svg` … `spade-10.svg`, numerate
+da 1 = Asso a 10 = Re) generati da [`scripts/piacentine.ts`](scripts/piacentine.ts) con
+`npm run carte`: sono disegni originali e semplificati nello stile piacentino. Per usare altre
+immagini basta sostituire i file mantenendo gli stessi nomi.
 
 ### Aiuti facoltativi
 
