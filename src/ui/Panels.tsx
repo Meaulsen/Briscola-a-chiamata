@@ -59,8 +59,14 @@ export function InfoBar({ hand, view, names, handNo, numHands }: {
 export function AuctionPanel({ hand, onBid }: { hand: HandState; onBid: (b: Bid) => void }) {
   const a = hand.auction;
   const range = pointsRange(a);
-  const [points, setPoints] = useState<number>(range?.min ?? 62);
-  const p = Math.min(Math.max(points, range?.min ?? 62), range?.max ?? 120);
+  const min = range?.min ?? 62;
+  const max = range?.max ?? 120;
+  const clamp = (n: number) => Math.min(Math.max(n, min), max);
+  // Testo libero mentre si scrive: limitarlo a ogni tasto impedirebbe di cancellare o digitare un numero su mobile.
+  const [text, setText] = useState(String(min));
+  const typed = Number(text);
+  const valid = text !== '' && Number.isInteger(typed) && typed >= min && typed <= max;
+  const step = (d: number) => setText(String(clamp((Number.isInteger(typed) && text !== '' ? typed : min) + d)));
   return (
     <div className="panel auction-panel">
       <h3>Tocca a te nell'asta</h3>
@@ -81,17 +87,29 @@ export function AuctionPanel({ hand, onBid }: { hand: HandState; onBid: (b: Bid)
         {range && (
           <span className="points-bid">
             Due a{' '}
+            <button type="button" className="secondary step" onClick={() => step(-1)} disabled={valid && typed <= min} aria-label="Diminuisci">
+              −
+            </button>
             <input
               type="number"
-              min={range.min}
-              max={range.max}
-              value={p}
-              onChange={(e) => setPoints(Number(e.target.value))}
-              aria-label="Punti"
+              inputMode="numeric"
+              min={min}
+              max={max}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onBlur={() => {
+                if (!valid) setText(String(Number.isFinite(typed) && text !== '' ? clamp(Math.round(typed)) : min));
+              }}
+              aria-label="Punti offerti"
+              aria-invalid={!valid}
             />
-            <button type="button" onClick={() => onBid({ kind: 'points', points: p })}>
+            <button type="button" className="secondary step" onClick={() => step(1)} disabled={valid && typed >= max} aria-label="Aumenta">
+              +
+            </button>
+            <button type="button" onClick={() => valid && onBid({ kind: 'points', points: typed })} disabled={!valid}>
               Rilancia
             </button>
+            {!valid && <small className="warn">da {min} a {max}</small>}
           </span>
         )}
         <button type="button" className="secondary" onClick={() => onBid({ kind: 'pass' })}>
