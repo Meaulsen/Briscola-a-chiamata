@@ -435,7 +435,19 @@ button.card.playable {
   align-items: center;
 }
 .points-bid input {
-  width: 5em;
+  width: 4.5em;
+  text-align: center;
+}
+.points-bid input[aria-invalid='true'] {
+  border-color: var(--bad);
+}
+.points-bid button.step {
+  min-width: 2.4em;
+  padding: 0.35em 0.5em;
+  font-weight: 700;
+}
+.points-bid .warn {
+  color: var(--bad);
 }
 .suit-btn {
   display: flex;
