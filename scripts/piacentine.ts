@@ -326,13 +326,47 @@ function pips(n: number, sym: string, scale: number): string {
 
 function bastoni(n: number): string {
   const k = n >> 1;
-  const len = [0, 150, 108, 78][k];
-  const w = [0, 14, 13, 11][k];
-  const ys = [[], [CY], [70, 130], [52, 100, 148]][k];
-  const parts: string[] = [];
-  for (const y of ys) parts.push(g(club(len, w), `translate(${CX} ${y}) rotate(-28)`));
-  for (const y of ys) parts.push(g(club(len, w), `translate(${CX} ${y}) rotate(28)`));
-  if (n % 2) parts.push(g(club(164, 15), `translate(${CX} ${CY})`));
+  if (k === 1) {
+    const parts = [-28, 28].map((a) => g(club(150, 14), `translate(${CX} ${CY}) rotate(${a})`));
+    if (n % 2) parts.push(g(club(164, 15), `translate(${CX} ${CY})`));
+    return parts.join('');
+  }
+  // Dal 4 in su le mazze si intrecciano a graticcio: k inclinate a sinistra e k a destra, distanziate
+  // perpendicolarmente alla loro direzione così che al centro restino aperti dei rombi.
+  const offsets = k === 2 ? [-16, 16] : [-26, 0, 26];
+  const angle = k === 2 ? 28 : 15;
+  const len = k === 2 ? 132 : 134;
+  const w = k === 2 ? 13 : 10.5;
+  const knots = k === 2 ? [0.34, 0.62] : [];
+  const rad = (angle * Math.PI) / 180;
+  const sticks = [-1, 1].map((s) =>
+    offsets.map((p) => {
+      const x = CX + p * Math.cos(rad);
+      const y = CY + s * p * Math.sin(rad);
+      // Nel 6 e nel 7 le due mazze interne sono capovolte: le loro teste vanno negli angoli in basso
+      // invece di accavallarsi con le altre al centro della cima.
+      const flip = k === 3 && s * p < 0 ? 180 : 0;
+      return { x, y, s, svg: g(club(len, w, knots), `translate(${f(x)} ${f(y)}) rotate(${s * angle + flip})`) };
+    }),
+  );
+  const [left, right] = sticks;
+  const parts = [...left, ...right].map((c) => c.svg);
+  // Intreccio sopra/sotto: agli incroci alterni la mazza inclinata a sinistra torna sopra l'altra.
+  left.forEach((a, i) =>
+    right.forEach((b, j) => {
+      if ((i + j) % 2) return;
+      // Intersezione delle due rette: a + t * (sin, cos) = b + u * (-sin, cos).
+      const sn = Math.sin(rad);
+      const cs = Math.cos(rad);
+      const t = ((b.x - a.x) * cs + (b.y - a.y) * sn) / (2 * sn * cs);
+      const ix = a.x + t * sn;
+      const iy = a.y + t * cs;
+      const id = `w${i}${j}`;
+      parts.push(`<clipPath id="${id}"><circle cx="${f(ix)}" cy="${f(iy)}" r="${f(w * 1.3)}"/></clipPath>`
+        + `<g clip-path="url(#${id})">${a.svg}</g>`);
+    }),
+  );
+  if (n % 2) parts.push(g(club(164, 13), `translate(${CX} ${CY})`));
   return parts.join('');
 }
 
