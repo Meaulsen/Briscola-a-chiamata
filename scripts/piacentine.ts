@@ -156,38 +156,99 @@ function coin(): string {
   ].join('');
 }
 
-/** Bastone verticale lungo `len`, spesso `w`: legno nodoso con rami mozzati e ghiere alle estremità. */
-function club(len: number, w = 6.5, knotsAt = [0.3, 0.7]): string {
+/** Curva chiusa e morbida (Catmull-Rom convertita in cubiche) che passa per i punti dati. */
+function smoothLoop(pts: number[][]): string {
+  const n = pts.length;
+  const p = (i: number) => pts[(i + n) % n];
+  let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+  for (let i = 0; i < n; i++) {
+    const [p0, p1, p2, p3] = [p(i - 1), p(i), p(i + 1), p(i + 2)];
+    d += `C${f(p1[0] + (p2[0] - p0[0]) / 6)} ${f(p1[1] + (p2[1] - p0[1]) / 6)} `
+      + `${f(p2[0] - (p3[0] - p1[0]) / 6)} ${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])} ${f(p2[1])}`;
+  }
+  return d + 'Z';
+}
+
+/** Mazza verticale lunga `len`, larga al massimo `w`: testa grossa e bitorzoluta in alto (y = -len/2),
+ *  impugnatura più sottile in basso con ghiera dorata, nodi e rami mozzati lungo il fusto. */
+function club(len: number, w = 13, knotsAt = [0.34, 0.62]): string {
   const h = len / 2;
-  const knots = knotsAt
+  const R = w / 2;
+  // Bozzi: [posizione lungo il fusto (0 = cima), lato (-1 sinistra, 1 destra), sporgenza in unità di R].
+  const lumps: [number, number, number][] = [
+    [0.04, 1, 0.12], [0.1, -1, 0.2], [0.16, 1, 0.24], [0.22, -1, 0.12],
+    ...knotsAt.map((t, i): [number, number, number] => [t, i % 2 ? 1 : -1, 0.42]),
+    ...knotsAt.map((t, i): [number, number, number] => [t + 0.06, i % 2 ? -1 : 1, 0.16]),
+  ];
+  const sigma = 0.035;
+  // Raggio del fusto: si assottiglia dalla testa all'impugnatura, con un leggero ondeggiare irregolare.
+  const radius = (t: number, side: number) => {
+    const base = R * (0.36 + 0.64 * Math.pow(1 - t, 2.4));
+    const wobble = R * 0.05 * (Math.sin(t * 23 + side * 1.7) + 0.6 * Math.sin(t * 41 + side * 3.1));
+    const bumps = lumps
+      .filter(([, s]) => s === side)
+      .reduce((acc, [c, , a]) => acc + R * a * Math.exp(-((t - c) ** 2) / (2 * sigma * sigma)), 0);
+    return base + wobble + bumps;
+  };
+  const yAt = (t: number) => -h + R * 0.75 + (len - R * 1.2) * t;
+  const ts = range(36).map((i) => i / 35);
+  const right = ts.map((t) => [radius(t, 1), yAt(t)]);
+  const left = ts.map((t) => [-radius(t, -1), yAt(t)]).reverse();
+  // Cupola della testa, un po' irregolare, e fondo arrotondato dell'impugnatura.
+  const top = [[-R * 0.8, -h + R * 0.3], [-R * 0.38, -h + R * 0.04], [R * 0.2, -h - R * 0.02], [R * 0.72, -h + R * 0.2]];
+  const rb = radius(1, 1);
+  const bottom = [[rb * 0.6, h - rb * 0.25], [-rb * 0.6, h - rb * 0.25]];
+  const outline = smoothLoop([...right, ...bottom, ...left, ...top]);
+
+  const stubs = knotsAt
     .map((t, i) => {
-      const y = -h + len * t;
       const s = i % 2 ? 1 : -1;
-      const l = w * 0.85;
+      const r = radius(t, s);
+      const bw = R * 0.42;
+      const l = R * 0.95;
       return g(
-        `<rect x="0" y="${f(-w * 0.22)}" width="${f(l)}" height="${f(w * 0.44)}" fill="${WOOD}" ${THIN}/>`
-          + `<ellipse cx="${f(l)}" cy="0" rx="${f(w * 0.12)}" ry="${f(w * 0.22)}" fill="#e2c389" ${THIN}/>`,
-        `translate(${f((s * w) / 2 - s * 0.6)} ${f(y)}) rotate(${s > 0 ? -40 : 220})`,
+        `<path d="M0 ${f(-bw)} L${f(l)} ${f(-bw * 0.62)} L${f(l)} ${f(bw * 0.62)} L0 ${f(bw)}Z" fill="${WOOD}" ${THIN}/>`
+          + `<ellipse cx="${f(l)}" cy="0" rx="${f(bw * 0.3)}" ry="${f(bw * 0.62)}" fill="#e2c389" ${THIN}/>`
+          + `<circle cx="${f(l)}" cy="0" r="${f(bw * 0.16)}" fill="${BROWN}"/>`,
+        `translate(${f(s * (r - R * 0.25))} ${f(yAt(t) - R * 0.2)}) rotate(${s > 0 ? -35 : 215})`,
       );
     })
     .join('');
-  const bark = range(Math.max(3, Math.round(len / 14)))
-    .map((i, _, a) => {
-      const y = -h + w * 2 + ((len - w * 4) * (i + 0.5)) / a.length;
-      const x = i % 2 ? -w * 0.32 : w * 0.02;
-      return `<path d="M${f(x)} ${f(y)} q${f(w * 0.16)} ${f(-w * 0.3)} ${f(w * 0.32)} 0" fill="none" stroke="#1d4a21" stroke-width="${f(w * 0.08)}" opacity="0.8"/>`;
+  // Occhi del legno (nodi senza ramo) sul lato opposto ai rami mozzati.
+  const eyes = knotsAt
+    .map((t, i) => {
+      const s = i % 2 ? -1 : 1;
+      const y = yAt(t + 0.06);
+      const x = s * radius(t + 0.06, s) * 0.45;
+      return `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(R * 0.2)}" ry="${f(R * 0.3)}" fill="#24552a" stroke="#123316" stroke-width="${f(R * 0.08)}"/>`
+        + `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(R * 0.07)}" ry="${f(R * 0.12)}" fill="#8fcf88"/>`;
     })
     .join('');
-  const band = (y: number) =>
-    `<rect x="${f(-w / 2 - 0.4)}" y="${f(y)}" width="${f(w + 0.8)}" height="${f(w * 0.55)}" rx="${f(w * 0.12)}" fill="${GOLD}" ${THIN}/>`
-    + `<path d="M${f(-w / 2)} ${f(y + w * 0.275)} H${f(w / 2)}" stroke="${RED}" stroke-width="${f(w * 0.14)}"/>`;
+  // Venature di corteccia: piccoli archi sparsi lungo il fusto.
+  const bark = range(Math.max(4, Math.round(len / 10)))
+    .map((i, _, a) => {
+      const t = 0.05 + (0.82 * (i + 0.5)) / a.length;
+      const r = Math.min(radius(t, 1), radius(t, -1));
+      const x = (i % 3 - 1) * r * 0.45;
+      const y = yAt(t);
+      return `<path d="M${f(x - r * 0.2)} ${f(y)} q${f(r * 0.2)} ${f(-r * 0.35)} ${f(r * 0.4)} 0" fill="none" stroke="#1d4a21" stroke-width="${f(R * 0.09)}" stroke-linecap="round" opacity="0.8"/>`;
+    })
+    .join('');
+  const shine = ts
+    .filter((t) => t > 0.04 && t < 0.86)
+    .map((t, i) => `${i ? 'L' : 'M'}${f(-radius(t, -1) * 0.45)} ${f(yAt(t))}`)
+    .join(' ');
+  const by = yAt(0.86);
+  const br = radius(0.86, 1) + 0.4;
+  const band = `<rect x="${f(-br)}" y="${f(by)}" width="${f(br * 2)}" height="${f(R * 0.55)}" rx="${f(R * 0.12)}" fill="${GOLD}" ${THIN}/>`
+    + `<path d="M${f(-br + 0.3)} ${f(by + R * 0.275)} H${f(br - 0.3)}" stroke="${RED}" stroke-width="${f(R * 0.14)}"/>`;
   return [
-    knots,
-    `<rect x="${f(-w / 2)}" y="${f(-h)}" width="${f(w)}" height="${f(len)}" rx="${f(w / 2)}" fill="${WOOD}" ${OUT}/>`,
+    stubs,
+    `<path d="${outline}" fill="${WOOD}" ${OUT}/>`,
+    `<path d="${shine}" fill="none" stroke="#b6e4b0" stroke-width="${f(R * 0.18)}" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>`,
     bark,
-    `<path d="M${f(-w * 0.2)} ${f(-h + w * 1.6)} V${f(h - w * 1.6)}" stroke="#b6e4b0" stroke-width="${f(w * 0.12)}" stroke-linecap="round" opacity="0.7"/>`,
-    band(-h + w * 0.5),
-    band(h - w * 1.05),
+    eyes,
+    band,
   ].join('');
 }
 
@@ -266,11 +327,12 @@ function pips(n: number, sym: string, scale: number): string {
 function bastoni(n: number): string {
   const k = n >> 1;
   const len = [0, 150, 108, 78][k];
+  const w = [0, 14, 13, 11][k];
   const ys = [[], [CY], [70, 130], [52, 100, 148]][k];
   const parts: string[] = [];
-  for (const y of ys) parts.push(g(club(len), `translate(${CX} ${y}) rotate(-28)`));
-  for (const y of ys) parts.push(g(club(len), `translate(${CX} ${y}) rotate(28)`));
-  if (n % 2) parts.push(g(club(164), `translate(${CX} ${CY})`));
+  for (const y of ys) parts.push(g(club(len, w), `translate(${CX} ${y}) rotate(-28)`));
+  for (const y of ys) parts.push(g(club(len, w), `translate(${CX} ${y}) rotate(28)`));
+  if (n % 2) parts.push(g(club(164, 15), `translate(${CX} ${CY})`));
   return parts.join('');
 }
 
@@ -347,7 +409,7 @@ function ace(suit: number): string {
         )
         .join('');
       const bud = `<path d="M0 -64 Q-5 -78 0 -90 Q5 -78 0 -64Z" fill="${GREEN_G}" ${OUT}/><circle cx="0" cy="-90" r="2.4" fill="${RED_G}" ${THIN}/>`;
-      return g(bud + leaves + club(150, 13, [0.22, 0.4, 0.6, 0.78]) + g(ribbon(24), 'translate(0 22)'), `translate(${CX} ${CY + 4})`);
+      return g(bud + leaves + club(150, 24, [0.36, 0.56, 0.76]) + g(ribbon(24), 'translate(0 22)'), `translate(${CX} ${CY + 4})`);
     }
     default:
       return g(aceSword(), `translate(${CX} ${CY + 4})`);
@@ -364,7 +426,7 @@ function held(suit: number): string {
     case 1:
       return g(coin(), 'translate(92 70) scale(0.82)');
     case 2:
-      return g(club(66, 5.5), 'translate(91 64) rotate(14)');
+      return g(club(66, 10), 'translate(91 64) rotate(14)');
     default:
       return g(straightSword(72, 0.8), 'translate(90 58) rotate(10)');
   }
