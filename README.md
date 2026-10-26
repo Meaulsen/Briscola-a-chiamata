@@ -59,6 +59,9 @@ l'asta, la carta chiamata) e devono dedurre il resto.
   risultato medio. I calcoli avvengono in un Web Worker, così l'interfaccia resta fluida.
 - **Livello Base**: solo la politica euristica (più rapida, meno forte).
 
+I parametri sono stati tarati con tornei "duplicati" (stesse carte, posti a rotazione): il livello
+Massimo guadagna in media circa mezzo punto di classifica a mano rispetto al livello Base.
+
 ## Sviluppo
 
 Serve Node.js 20 o successivo.

@@ -3,7 +3,7 @@
  * occupa a turno ciascuno dei 5 posti contro 4 bot B, e si confronta con la stessa
  * distribuzione giocata da 5 bot B. Uso:
  *   npx vite-node scripts/tournament.ts -- <A> <B> <deals> [firstSeed]
- * dove A e B sono nomi in CONFIGS qui sotto.
+ * dove A e B sono configurazioni (vedi scripts/configs.ts).
  */
 import { handDeltas, playBotHand } from '../src/ai/arena';
 import { getConfig } from './configs';

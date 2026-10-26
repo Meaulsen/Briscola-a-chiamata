@@ -11,6 +11,7 @@ const NAMED: Record<string, BotConfig> = {
   base: BOT_CONFIGS.base,
   forte: { ...BOT_CONFIGS.forte, search: { ...DEFAULT_SEARCH, timeMs: 0, minWorlds: 120, maxWorlds: 120 } },
   forteFull: BOT_CONFIGS.forte,
+  forteLite: { ...BOT_CONFIGS.forte, search: { ...DEFAULT_SEARCH, timeMs: 0, minWorlds: 50, maxWorlds: 50 } },
 };
 
 export function getConfig(spec: string): BotConfig {

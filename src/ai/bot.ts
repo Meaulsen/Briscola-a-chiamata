@@ -20,7 +20,9 @@ export interface BotConfig {
 
 export const BOT_CONFIGS: Record<BotLevel, BotConfig> = {
   base: { policy: DEFAULT_HEURISTIC, bidding: { ...DEFAULT_BIDDING, samples: 24 }, search: null },
-  forte: { policy: DEFAULT_HEURISTIC, bidding: DEFAULT_BIDDING, search: DEFAULT_SEARCH },
+  // Il bot forte gioca meglio di quanto prevedano le sue simulazioni d'asta (fatte con
+  // l'euristica), quindi conviene che chiami anche con un valore atteso leggermente negativo.
+  forte: { policy: DEFAULT_HEURISTIC, bidding: { ...DEFAULT_BIDDING, threshold: -0.5 }, search: DEFAULT_SEARCH },
 };
 
 /** Cache delle valutazioni d'asta (costose) per mano. */
