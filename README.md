@@ -48,7 +48,7 @@ durante la partita:
 In entrambi i casi le carte di briscola hanno il bordo del colore del seme. Le immagini sono file SVG
 in [`public/carte/piacentine/`](public/carte/piacentine) (`coppe-1.svg` … `spade-10.svg`, numerate
 da 1 = Asso a 10 = Re) generati da [`scripts/piacentine.ts`](scripts/piacentine.ts) con
-`npm run carte`: sono disegni originali e semplificati nello stile piacentino. Per usare altre
+`npm run carte`: sono disegni originali nello stile piacentino. Per usare altre
 immagini basta sostituire i file mantenendo gli stessi nomi.
 
 ### Aiuti facoltativi
