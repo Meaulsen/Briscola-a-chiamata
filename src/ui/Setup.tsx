@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { Settings } from './storage';
 
-export function Setup({ initial, canResume, onStart, onResume }: {
+export function Setup({ initial, canResume, onStart, onResume, onHistory }: {
   initial: Settings;
   canResume: boolean;
   onStart: (s: Settings) => void;
   onResume: () => void;
+  onHistory: () => void;
 }) {
   const [s, setS] = useState(initial);
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setS((o) => ({ ...o, [k]: v }));
@@ -66,6 +67,9 @@ export function Setup({ initial, canResume, onStart, onResume }: {
         </fieldset>
         <button type="submit">{canResume ? 'Nuova partita' : 'Inizia la partita'}</button>
       </form>
+      <button type="button" className="secondary history-link" onClick={onHistory}>
+        Storico partite
+      </button>
     </div>
   );
 }

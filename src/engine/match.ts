@@ -4,6 +4,8 @@ import { mixSeed } from './rng';
 import type { HandOutcome } from './scoring';
 
 export interface MatchConfig {
+  /** Identificativo della partita (per lo storico). */
+  id?: string;
   numHands: number;
   names: string[];
   seed: number;

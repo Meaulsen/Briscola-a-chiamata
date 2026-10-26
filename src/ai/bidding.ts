@@ -4,6 +4,7 @@ import { shuffle } from '../engine/rng';
 import { scoreDeltas } from '../engine/scoring';
 import type { PlayerView } from '../engine/view';
 import { DEFAULT_HEURISTIC, type HeuristicParams, rollout } from './heuristic';
+import type { BidNote, TrumpNote } from './notes';
 import { type SimState, callerTeamPoints, callerTeamTricks } from './sim';
 
 /**
@@ -129,4 +130,20 @@ export function chooseBid(v: PlayerView, t: BidTable, prm: BiddingParams = DEFAU
 
 export function chooseTrump(v: PlayerView, t: BidTable): Suit {
   return bestSuit(t, v.rank!, v.target).suit;
+}
+
+/** Valori attesi delle chiamate possibili ora, per lo storico. */
+export function bidNote(v: PlayerView, t: BidTable, prm: BiddingParams = DEFAULT_BIDDING): BidNote {
+  const a = v.auction;
+  if (inPointsPhase(a)) {
+    const target = a.target + 1;
+    const evs = target > MAX_TARGET ? [] : [{ rank: RANK_DUE, ...bestSuit(t, RANK_DUE, target), target }];
+    return { kind: 'bid', evs, threshold: prm.threshold };
+  }
+  const evs = legalCallRanks(a).map((rank) => ({ rank, ...bestSuit(t, rank, MIN_TARGET), target: MIN_TARGET }));
+  return { kind: 'bid', evs, threshold: prm.threshold };
+}
+
+export function trumpNote(v: PlayerView, t: BidTable): TrumpNote {
+  return { kind: 'trump', evs: [0, 1, 2, 3].map((s) => expectedValue(t, v.rank!, s, v.target)) };
 }

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BOT_CONFIGS, type BotLevel, BotMemory, type Decision, decide } from '../ai/bot';
 import type { WorkerRequest, WorkerResponse } from '../ai/worker';
+import type { MoveNote } from '../ai/notes';
 import type { HandAction } from '../engine/hand';
-import { type MatchState, advanceMatch, applyMatchAction } from '../engine/match';
+import { advanceMatch, applyMatchAction, matchWinners } from '../engine/match';
 import { viewFor } from '../engine/view';
-import { type Speed, saveMatch } from './storage';
+import { putMatch } from '../history/db';
+import { addNote, buildHandRecord, currentHandNumber, emptyNotes, snapshotRecord } from '../history/record';
+import { type GameSession, type Speed, saveSession } from './storage';
 
 export const HUMAN = 0;
 
@@ -61,24 +64,50 @@ function toAction(player: number, d: Decision): HandAction {
   return { type: 'play', player, card: d.card };
 }
 
-export function useGame(initial: MatchState, level: BotLevel, speed: Speed) {
-  const [match, setMatch] = useState(initial);
+/** Salva la sessione (localStorage) e lo storico (IndexedDB), al più una volta ogni tanto. */
+function usePersist(session: GameSession, onHistoryError: (e: string) => void) {
+  const latest = useRef(session);
+  latest.current = session;
+  const flush = useCallback(() => {
+    const s = latest.current;
+    saveSession(s);
+    const winners = s.match.finished ? matchWinners(s.match) : [];
+    putMatch(snapshotRecord(s.record, s.match, s.notes, winners, Date.now())).catch((err) =>
+      onHistoryError(`Storico non salvato: ${String(err)}`),
+    );
+  }, [onHistoryError]);
+  useEffect(() => {
+    const t = setTimeout(flush, session.match.finished ? 0 : 400);
+    return () => clearTimeout(t);
+  }, [session, flush]);
+  // All'uscita dalla partita salva subito l'ultimo stato.
+  useEffect(() => flush, [flush]);
+}
+
+export function useGame(initial: GameSession, level: BotLevel, speed: Speed) {
+  const [session, setSession] = useState(initial);
   const [holdTrick, setHoldTrick] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const matchRef = useRef(match);
-  matchRef.current = match;
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const ref = useRef(session);
+  ref.current = session;
   const ask = useBotEngine();
   const delays = DELAYS[speed];
+  const match = session.match;
 
-  useEffect(() => saveMatch(match), [match]);
+  usePersist(session, setHistoryError);
 
-  const dispatch = useCallback((action: HandAction) => {
-    const prev = matchRef.current;
+  const commit = (next: GameSession) => {
+    ref.current = next;
+    setSession(next);
+  };
+
+  const dispatch = useCallback((action: HandAction, note?: MoveNote) => {
+    const prev = ref.current;
     try {
-      const next = applyMatchAction(prev, action);
-      matchRef.current = next;
-      setMatch(next);
-      if (next.hand.tricks.length > prev.hand.tricks.length) setHoldTrick(true);
+      const nextMatch = applyMatchAction(prev.match, action);
+      commit({ ...prev, match: nextMatch, notes: addNote(prev.notes, action, note) });
+      if (nextMatch.hand.tricks.length > prev.match.hand.tricks.length) setHoldTrick(true);
     } catch (err) {
       setError(String(err));
     }
@@ -106,7 +135,7 @@ export function useGame(initial: MatchState, level: BotLevel, speed: Speed) {
       const decision = res.decision;
       const wait = Math.max(0, delays.bot - (performance.now() - started));
       timer = setTimeout(() => {
-        if (reqId.current === id) dispatch(toAction(player, decision));
+        if (reqId.current === id) dispatch(toAction(player, decision), decision.note);
       }, wait);
     });
     return () => {
@@ -117,12 +146,17 @@ export function useGame(initial: MatchState, level: BotLevel, speed: Speed) {
   }, [match, holdTrick, level, delays.bot, ask, dispatch]);
 
   const nextHand = useCallback(() => {
-    const next = advanceMatch(matchRef.current);
-    matchRef.current = next;
-    setMatch(next);
+    const prev = ref.current;
+    const m = prev.match;
+    const done = buildHandRecord(m.hand, prev.notes, m.deals, currentHandNumber(m));
+    commit({
+      match: advanceMatch(m),
+      record: { ...prev.record, hands: [...prev.record.hands, done] },
+      notes: emptyNotes(),
+    });
   }, []);
 
   const releaseTrick = useCallback(() => setHoldTrick(false), []);
 
-  return { match, holdTrick, error, dispatch, nextHand, releaseTrick };
+  return { session, match, holdTrick, error, historyError, dispatch, nextHand, releaseTrick };
 }

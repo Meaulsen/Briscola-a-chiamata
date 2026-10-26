@@ -18,6 +18,23 @@ telefono, senza installare niente e senza server.
 
 La partita in corso viene salvata nel browser: se ricarichi la pagina puoi riprenderla dal menu.
 
+### Storico e analisi delle partite
+
+Ogni partita, anche in corso, viene registrata nello **Storico partite** (dal menu iniziale, o con
+**Analizza la partita** a fine partita). Per ogni partita si vedono le mani con chiamata, compagno,
+punti, esito e classifica progressiva; ogni mano si può ripercorrere passo passo:
+
+- le mani iniziali di tutti e cinque i giocatori, con le carte già giocate attenuate;
+- l'asta intervento per intervento e la scelta della briscola;
+- le prese giocata per giocata, con chi esce, chi prende e i punti;
+- il **ragionamento dei bot**: per ogni chiamata il valore atteso delle chiamate possibili, per la
+  briscola il valore di ogni seme e, per ogni carta giocata (livello Massimo), il valore stimato di
+  tutte le carte che il bot aveva in mano.
+
+Lo storico è salvato in **IndexedDB**, il database integrato nel browser: resta sul dispositivo, non
+viene inviato a nessun server e si perde cancellando i dati del sito. Le mani annullate perché tutti
+hanno passato compaiono nello storico ma non contano nel punteggio.
+
 ### Aiuti facoltativi
 
 - **Carte uscite**: tabella delle carte già giocate, per seme.
@@ -86,6 +103,7 @@ Struttura del codice:
 
 - `src/engine/`: regole del gioco, pure e testate (carte, asta, presa, mano, punteggio, partita).
 - `src/ai/`: bot (simulatore veloce, euristica, campionamento dei mondi, ricerca, asta, Web Worker).
+- `src/history/`: record delle partite per lo storico e salvataggio in IndexedDB.
 - `src/ui/`: interfaccia React.
 
 ## Pubblicazione

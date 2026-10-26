@@ -1,14 +1,31 @@
 import type { Card, Suit } from '../engine/cards';
 import type { Bid } from '../engine/auction';
 import type { PlayerView } from '../engine/view';
-import { type BidTable, type BiddingParams, DEFAULT_BIDDING, buildBidTable, chooseBid, chooseTrump } from './bidding';
+import {
+  type BidTable,
+  type BiddingParams,
+  DEFAULT_BIDDING,
+  bidNote,
+  buildBidTable,
+  chooseBid,
+  chooseTrump,
+  trumpNote,
+} from './bidding';
 import { DEFAULT_HEURISTIC, type HeuristicParams, heuristicCard } from './heuristic';
 import { DEFAULT_SEARCH, type SearchParams, searchCard } from './search';
+import type { MoveNote } from './notes';
 import { makeSampler, simFromView } from './worlds';
 
 export type BotLevel = 'base' | 'forte';
 
-export type Decision = { type: 'bid'; bid: Bid } | { type: 'trump'; suit: Suit } | { type: 'play'; card: Card };
+export type Decision = (
+  | { type: 'bid'; bid: Bid }
+  | { type: 'trump'; suit: Suit }
+  | { type: 'play'; card: Card }
+) & {
+  /** Ragionamento del bot, salvato nello storico (assente se non disponibile). */
+  note?: MoveNote;
+};
 
 export interface BotConfig {
   /** Politica euristica usata quando non c'è ricerca. */
@@ -45,12 +62,19 @@ export class BotMemory {
 export function decide(v: PlayerView, cfg: BotConfig, mem: BotMemory, rand: () => number = Math.random): Decision {
   if (v.turn !== v.me) throw new Error('Non è il mio turno');
   switch (v.phase) {
-    case 'auction':
-      return { type: 'bid', bid: chooseBid(v, mem.bidTable(v, cfg.bidding, rand), cfg.bidding) };
-    case 'trump':
-      return { type: 'trump', suit: chooseTrump(v, mem.bidTable(v, cfg.bidding, rand)) };
+    case 'auction': {
+      const t = mem.bidTable(v, cfg.bidding, rand);
+      return { type: 'bid', bid: chooseBid(v, t, cfg.bidding), note: bidNote(v, t, cfg.bidding) };
+    }
+    case 'trump': {
+      const t = mem.bidTable(v, cfg.bidding, rand);
+      return { type: 'trump', suit: chooseTrump(v, t), note: trumpNote(v, t) };
+    }
     case 'play': {
-      if (cfg.search) return { type: 'play', card: searchCard(v, cfg.search, rand).card };
+      if (cfg.search) {
+        const r = searchCard(v, cfg.search, rand);
+        return { type: 'play', card: r.card, note: { kind: 'play', values: r.values, worlds: r.worlds } };
+      }
       const w = makeSampler(v).sample(rand);
       return { type: 'play', card: heuristicCard(simFromView(v, w.hands, w.partner), v.me, cfg.policy, rand) };
     }
