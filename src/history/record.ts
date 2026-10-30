@@ -61,6 +61,8 @@ export interface HandRecord {
   trumpNote: TrumpNote | null;
   tricks: TrickRecord[];
   outcome: HandOutcome | null;
+  /** Distribuzioni scartate perché qualcuno aveva meno di 11 punti: i giocatori interessati. */
+  redeals?: number[][];
 }
 
 export interface MatchRecord {
@@ -109,6 +111,7 @@ export function buildHandRecord(h: HandState, notes: HandNotes, deal: number, nu
     trumpNote: notes.trump,
     tricks,
     outcome: h.outcome,
+    redeals: h.redeals,
   };
 }
 

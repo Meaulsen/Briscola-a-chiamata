@@ -27,6 +27,8 @@ export interface PlayerView {
   turn: number;
   points: number[];
   tricksWon: number[];
+  /** Regola attiva: nessuno ha ricevuto una mano da meno di 11 punti. */
+  redealWeakHands: boolean;
 }
 
 export function viewFor(s: HandState, me: number): PlayerView {
@@ -51,5 +53,6 @@ export function viewFor(s: HandState, me: number): PlayerView {
     turn: s.turn,
     points: s.points,
     tricksWon: s.tricksWon,
+    redealWeakHands: s.redealWeakHands ?? false,
   };
 }

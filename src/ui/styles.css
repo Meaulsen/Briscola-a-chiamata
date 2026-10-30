@@ -473,6 +473,14 @@ button.card.playable {
   margin-bottom: 8px;
   font-size: 0.9em;
 }
+.redeal-notice {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 0.9em;
+}
 .waiting {
   margin-top: 8px;
   text-align: center;

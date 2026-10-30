@@ -48,10 +48,10 @@ export class BotMemory {
 
   bidTable(v: PlayerView, prm: BiddingParams, rand: () => number): BidTable {
     const hand = v.phase === 'auction' || v.phase === 'trump' ? v.hand : [];
-    const key = `${v.me}|${v.dealer}|${prm.samples}|${[...hand].sort((a, b) => a - b).join(',')}`;
+    const key = `${v.me}|${v.dealer}|${prm.samples}|${v.redealWeakHands}|${[...hand].sort((a, b) => a - b).join(',')}`;
     let t = this.tables.get(key);
     if (!t) {
-      t = buildBidTable(hand, v.me, v.dealer, prm, rand);
+      t = buildBidTable(hand, v.me, v.dealer, prm, rand, v.redealWeakHands);
       if (this.tables.size > 50) this.tables.clear();
       this.tables.set(key, t);
     }

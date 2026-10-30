@@ -51,6 +51,13 @@ export interface HandState {
   /** Tutti hanno passato: la mano va rifatta, senza punteggio. */
   allPassed: boolean;
   outcome: HandOutcome | null;
+  /**
+   * Distribuzioni scartate prima di questa perché qualcuno aveva meno di MIN_HAND_POINTS punti in
+   * mano: per ognuna, i giocatori interessati.
+   */
+  redeals?: number[][];
+  /** Regola attiva: tutte le mani distribuite valgono almeno MIN_HAND_POINTS punti. */
+  redealWeakHands?: boolean;
 }
 
 export type HandAction =
@@ -68,6 +75,14 @@ export function deal(dealer: number, seed: number): Card[][] {
     p = nextPlayer(p);
   }
   return hands.map(sortHand);
+}
+
+/** Sotto questi punti in mano, se la regola è attiva, si ridanno le carte. */
+export const MIN_HAND_POINTS = 11;
+
+/** Giocatori con meno di MIN_HAND_POINTS punti in mano. */
+export function weakHands(hands: readonly Card[][]): number[] {
+  return hands.flatMap((h, p) => (sumPoints(h) < MIN_HAND_POINTS ? [p] : []));
 }
 
 export function newHand(dealer: number, seed: number): HandState {

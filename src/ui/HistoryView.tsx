@@ -4,6 +4,7 @@ import { describeBid } from '../engine/auction';
 import { deleteMatch, getMatch, listMatches } from '../history/db';
 import type { HandRecord, MatchRecord, MatchSummary } from '../history/record';
 import { CardView } from './CardView';
+import { describeRedeals } from './Panels';
 import { HUMAN } from './useGame';
 
 const fmt = (n: number) => (n > 0 ? `+${n}` : String(n));
@@ -242,6 +243,12 @@ function HandReplay({ match, hand, onBack }: { match: MatchRecord; hand: HandRec
         {hand.number !== null ? `Mano ${hand.number}` : 'Mano annullata (tutti hanno passato)'} · mazziere {names[hand.dealer]}
       </h2>
       <p>
+        {hand.redeals && hand.redeals.length > 0 && (
+          <>
+            {describeRedeals(hand.redeals, names)}
+            <br />
+          </>
+        )}
         {callLabel(hand, names) || 'Nessun chiamante'}
         {hand.trump !== null && <> · briscola {SUIT_NAMES[hand.trump]}</>}
         {hand.outcome && (

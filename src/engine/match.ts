@@ -1,5 +1,5 @@
 import { NUM_PLAYERS, nextPlayer } from './cards';
-import { type HandAction, type HandState, applyHandAction, newHand } from './hand';
+import { type HandAction, type HandState, applyHandAction, deal, newHandFromCards, weakHands } from './hand';
 import { mixSeed } from './rng';
 import type { HandOutcome } from './scoring';
 
@@ -9,6 +9,8 @@ export interface MatchConfig {
   numHands: number;
   names: string[];
   seed: number;
+  /** Se qualcuno ha meno di 11 punti in mano, lo stesso mazziere ridà le carte. */
+  redealWeakHands?: boolean;
 }
 
 export interface HandRecord {
@@ -38,9 +40,28 @@ export function newMatch(config: MatchConfig): MatchState {
     dealer,
     scores: Array(NUM_PLAYERS).fill(0),
     history: [],
-    hand: newHand(dealer, mixSeed(config.seed, 1)),
+    hand: dealHand(config, dealer, 1),
     finished: false,
   };
+}
+
+/**
+ * Distribuisce le carte della distribuzione numero `deals`. Con la regola delle mani deboli attiva,
+ * finché qualcuno ha meno di 11 punti si rimescola e si ridà, con lo stesso mazziere.
+ */
+function dealHand(config: MatchConfig, dealer: number, deals: number): HandState {
+  const base = mixSeed(config.seed, deals);
+  const redeals: number[][] = [];
+  for (let k = 0; ; k++) {
+    const cards = deal(dealer, k === 0 ? base : mixSeed(base, k));
+    const weak = config.redealWeakHands ? weakHands(cards) : [];
+    if (weak.length === 0) {
+      const hand = newHandFromCards(dealer, cards);
+      if (!config.redealWeakHands) return hand;
+      return redeals.length > 0 ? { ...hand, redealWeakHands: true, redeals } : { ...hand, redealWeakHands: true };
+    }
+    redeals.push(weak);
+  }
 }
 
 export function applyMatchAction(m: MatchState, action: HandAction): MatchState {
@@ -74,7 +95,7 @@ export function advanceMatch(m: MatchState): MatchState {
     history,
     dealer,
     deals,
-    hand: newHand(dealer, mixSeed(m.config.seed, deals)),
+    hand: dealHand(m.config, dealer, deals),
   };
 }
 

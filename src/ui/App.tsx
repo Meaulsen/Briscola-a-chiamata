@@ -5,7 +5,7 @@ import { viewFor } from '../engine/view';
 import { LastTrick, PlayedPanel, PointsPanel } from './Aids';
 import { HistoryView } from './HistoryView';
 import { CardStyleContext } from './CardView';
-import { AuctionLog, AuctionPanel, InfoBar, TrumpPicker, WaitingPanel } from './Panels';
+import { AuctionLog, AuctionPanel, InfoBar, RedealNotice, TrumpPicker, WaitingPanel } from './Panels';
 import { Setup } from './Setup';
 import { FinalStandings, HandSummary, History } from './Summary';
 import { Table } from './Table';
@@ -42,7 +42,13 @@ export function App() {
           const names = [s.name, ...BOT_NAMES.filter((n) => n.toLowerCase() !== s.name.toLowerCase())].slice(0, 5);
           if (names.length < 5) names.push('Anna');
           const seed = randomSeed();
-          const match = newMatch({ id: `${Date.now().toString(36)}-${seed.toString(36)}`, numHands: s.numHands, names, seed });
+          const match = newMatch({
+            id: `${Date.now().toString(36)}-${seed.toString(36)}`,
+            numHands: s.numHands,
+            names,
+            seed,
+            redealWeakHands: s.redealWeakHands,
+          });
           setScreen({ kind: 'game', session: newSession(match, s.level) });
           setGameKey((k) => k + 1);
         }}
@@ -127,6 +133,7 @@ function Game({ initial, settings, onSettings, onExit, onAnalyze }: {
 
       <main>
         <section className="board">
+          {hand.phase === 'auction' && <RedealNotice redeals={hand.redeals} names={names} />}
           {hand.phase === 'auction' && <AuctionLog hand={hand} names={names} />}
           <Table
             hand={hand}

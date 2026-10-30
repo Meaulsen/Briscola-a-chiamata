@@ -61,6 +61,10 @@ export function Setup({ initial, canResume, onStart, onResume, onHistory }: {
             <option value="testo">Nome del valore e del seme</option>
           </select>
         </label>
+        <label className="check">
+          <input type="checkbox" checked={s.redealWeakHands} onChange={(e) => set('redealWeakHands', e.target.checked)} />
+          Si ridanno le carte se qualcuno ha meno di 11 punti in mano
+        </label>
         <fieldset>
           <legend>Aiuti (si possono cambiare anche durante la partita)</legend>
           <label className="check">

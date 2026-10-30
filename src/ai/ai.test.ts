@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { makeCard } from '../engine/cards';
-import { applyHandAction, newHand } from '../engine/hand';
+import { makeCard, sumPoints } from '../engine/cards';
+import { MIN_HAND_POINTS, applyHandAction, deal, newHand } from '../engine/hand';
+import { newMatch } from '../engine/match';
 import { mulberry32 } from '../engine/rng';
 import { viewFor } from '../engine/view';
 import { handDeltas, playBotHand } from './arena';
 import { BOT_CONFIGS, type BotConfig } from './bot';
-import { buildBidTable, chooseBid, expectedValue } from './bidding';
+import { buildBidTable, chooseBid, expectedValue, sampleOtherHands } from './bidding';
 import { DEFAULT_SEARCH, searchCard } from './search';
 import { makeSampler, partnerWeights } from './worlds';
 
@@ -115,5 +116,27 @@ describe('asta e ricerca', () => {
     const r = searchCard(v, { ...DEFAULT_SEARCH, timeMs: 0, minWorlds: 30, maxWorlds: 30 }, mulberry32(9));
     expect(v.hand).toContain(r.card);
     expect(r.values.map((x) => x.card).sort()).toEqual([...v.hand].sort());
+  });
+});
+
+describe('regola delle mani da almeno 11 punti', () => {
+  it("con la regola attiva le simulazioni d'asta non danno mani deboli agli altri", () => {
+    const rand = mulberry32(3);
+    const hand = deal(0, 11)[2];
+    let weakWithout = 0;
+    for (let i = 0; i < 200; i++) {
+      const hands = sampleOtherHands(hand, 2, rand, true);
+      expect(hands[2]).toEqual(hand);
+      expect(new Set(hands.flat()).size).toBe(40);
+      expect(hands.every((h, q) => q === 2 || sumPoints(h) >= MIN_HAND_POINTS)).toBe(true);
+      if (sampleOtherHands(hand, 2, rand).some((h, q) => q !== 2 && sumPoints(h) < MIN_HAND_POINTS)) weakWithout++;
+    }
+    expect(weakWithout).toBeGreaterThan(0);
+  });
+
+  it('i bot vedono se la regola è attiva', () => {
+    const names = ['a', 'b', 'c', 'd', 'e'];
+    expect(viewFor(newMatch({ numHands: 5, names, seed: 1 }).hand, 1).redealWeakHands).toBe(false);
+    expect(viewFor(newMatch({ numHands: 5, names, seed: 1, redealWeakHands: true }).hand, 1).redealWeakHands).toBe(true);
   });
 });
