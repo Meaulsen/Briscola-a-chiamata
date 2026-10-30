@@ -7,7 +7,7 @@ telefono, senza installare niente e senza server.
 ## Come si gioca
 
 1. Scegli il nome, il numero di mani (5, 10, 15 o 20), la forza dei bot, la velocità, l'aspetto delle
-   carte e gli aiuti.
+   carte, gli aiuti e se ridare le carte quando qualcuno ha una mano troppo debole.
 2. **Asta**: quando tocca a te chiami un valore (Asso, Tre, Re, …) o passi. Ogni chiamata deve essere
    più bassa della precedente. Dopo il Due si rilancia sui punti (“Due a 62”, “Due a 70”…, fino a 120).
 3. Se vinci l'asta scegli il **seme di briscola**: la carta chiamata è il valore detto in asta di quel
@@ -77,6 +77,14 @@ Punti non specificati dal regolamento e scelte fatte:
 - Chi ha già chiamato può richiamare più in basso quando torna il suo turno (come Carla nell'esempio
   del regolamento).
 - A parità di punteggio finale si dichiara la **vittoria a pari merito**.
+
+### Regola facoltativa: mani sotto gli 11 punti
+
+Con la casella **Si ridanno le carte se qualcuno ha meno di 11 punti in mano** (nel menu iniziale,
+disattivata di serie) ogni distribuzione in cui almeno un giocatore ha meno di 11 punti in mano viene
+annullata prima dell'asta: lo **stesso mazziere** rimescola e ridà, finché tutte le mani valgono
+almeno 11 punti. Succede in circa 4 distribuzioni su 10. Al tavolo compare un avviso con chi aveva la
+mano debole, e lo stesso avviso resta nello storico. Le distribuzioni ridate non contano come mani.
 
 ## I bot
 

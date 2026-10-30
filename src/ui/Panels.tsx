@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RANK_DUE, RANK_NAMES, SUIT_NAMES, cardName, makeCard } from '../engine/cards';
 import { type Bid, describeBid, inPointsPhase, legalCallRanks, pointsRange } from '../engine/auction';
-import type { HandState } from '../engine/hand';
+import { type HandState, MIN_HAND_POINTS } from '../engine/hand';
 import type { PlayerView } from '../engine/view';
 import { HUMAN } from './useGame';
 
@@ -118,6 +118,22 @@ export function AuctionPanel({ hand, onBid }: { hand: HandState; onBid: (b: Bid)
       </div>
     </div>
   );
+}
+
+/** Avviso delle distribuzioni rifatte perché qualcuno aveva meno di 11 punti in mano. */
+export function RedealNotice({ redeals, names }: { redeals: number[][] | undefined; names: string[] }) {
+  if (!redeals || redeals.length === 0) return null;
+  return <div className="redeal-notice">{describeRedeals(redeals, names)}</div>;
+}
+
+export function describeRedeals(redeals: number[][], names: string[]): string {
+  const times = redeals.length === 1 ? '' : ` ${redeals.length} volte`;
+  const players = [...new Set(redeals.flat())].sort((a, b) => Number(a === HUMAN) - Number(b === HUMAN));
+  const me = players.includes(HUMAN);
+  const list = players.map((p) => (p === HUMAN ? 'tu' : names[p]));
+  const verb = list.length > 1 ? (me ? 'avevate' : 'avevano') : me ? 'avevi' : 'aveva';
+  const who = list.length === 1 ? (me ? '' : `${list[0]} `) : `${list.slice(0, -1).join(', ')} e ${list[list.length - 1]} `;
+  return `Carte ridate${times}: ${who}${verb} meno di ${MIN_HAND_POINTS} punti in mano.`;
 }
 
 export function AuctionLog({ hand, names }: { hand: HandState; names: string[] }) {

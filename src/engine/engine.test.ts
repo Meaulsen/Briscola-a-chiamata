@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RANK_DUE, fullDeck, makeCard, pointsOf, sumPoints } from './cards';
 import { applyBid, isLegalBid, legalCallRanks, newAuction, pointsRange } from './auction';
-import { applyHandAction, deal, newHandFromCards } from './hand';
+import { MIN_HAND_POINTS, applyHandAction, deal, newHandFromCards, weakHands } from './hand';
 import { advanceMatch, applyMatchAction, matchWinners, newMatch } from './match';
 import { scoreDeltas, scoreHand } from './scoring';
 import { trickWinnerIndex } from './trick';
@@ -219,5 +219,24 @@ describe('partita', () => {
     expect(m.history.length).toBe(2);
     expect(m.scores.reduce((a, b) => a + b, 0)).toBe(0);
     expect(matchWinners(m).length).toBeGreaterThan(0);
+  });
+
+  it('con la regola attiva nessuno ha meno di 11 punti in mano e il mazziere resta lo stesso', () => {
+    const names = ['a', 'b', 'c', 'd', 'e'];
+    let redealt = 0;
+    for (let seed = 0; seed < 40; seed++) {
+      const plain = newMatch({ numHands: 5, names, seed });
+      const m = newMatch({ numHands: 5, names, seed, redealWeakHands: true });
+      expect(m.dealer).toBe(plain.dealer);
+      expect(m.hand.hands.every((h) => sumPoints(h) >= MIN_HAND_POINTS)).toBe(true);
+      if (weakHands(plain.hand.hands).length > 0) {
+        redealt++;
+        expect(m.hand.redeals![0]).toEqual(weakHands(plain.hand.hands));
+      } else {
+        expect(m.hand.redeals).toBeUndefined();
+        expect(m.hand.hands).toEqual(plain.hand.hands);
+      }
+    }
+    expect(redealt).toBeGreaterThan(0);
   });
 });

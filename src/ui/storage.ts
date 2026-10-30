@@ -13,6 +13,8 @@ export interface Settings {
   showPlayed: boolean;
   showPoints: boolean;
   cardStyle: CardStyle;
+  /** Si ridanno le carte se qualcuno ha meno di 11 punti in mano. */
+  redealWeakHands: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -23,6 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showPlayed: false,
   showPoints: false,
   cardStyle: 'piacentine',
+  redealWeakHands: false,
 };
 
 const SETTINGS_KEY = 'briscola-chiamata:settings';
