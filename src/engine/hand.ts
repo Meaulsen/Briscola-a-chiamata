@@ -56,6 +56,8 @@ export interface HandState {
    * mano: per ognuna, i giocatori interessati.
    */
   redeals?: number[][];
+  /** Regola attiva: tutte le mani distribuite valgono almeno MIN_HAND_POINTS punti. */
+  redealWeakHands?: boolean;
 }
 
 export type HandAction =

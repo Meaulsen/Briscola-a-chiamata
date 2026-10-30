@@ -85,6 +85,8 @@ disattivata di serie) ogni distribuzione in cui almeno un giocatore ha meno di 1
 annullata prima dell'asta: lo **stesso mazziere** rimescola e ridà, finché tutte le mani valgono
 almeno 11 punti. Succede in circa 4 distribuzioni su 10. Al tavolo compare un avviso con chi aveva la
 mano debole, e lo stesso avviso resta nello storico. Le distribuzioni ridate non contano come mani.
+I bot conoscono la regola: nelle simulazioni dell'asta distribuiscono le carte degli altri solo in
+modo che ogni mano valga almeno 11 punti.
 
 ## I bot
 

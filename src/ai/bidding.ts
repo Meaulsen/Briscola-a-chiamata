@@ -1,4 +1,15 @@
-import { type Card, NUM_PLAYERS, RANK_DUE, type Rank, type Suit, makeCard, nextPlayer } from '../engine/cards';
+import {
+  CARDS_PER_PLAYER,
+  type Card,
+  NUM_PLAYERS,
+  RANK_DUE,
+  type Rank,
+  type Suit,
+  makeCard,
+  nextPlayer,
+  sumPoints,
+} from '../engine/cards';
+import { MIN_HAND_POINTS } from '../engine/hand';
 import { type Bid, MAX_TARGET, MIN_TARGET, inPointsPhase, legalCallRanks } from '../engine/auction';
 import { shuffle } from '../engine/rng';
 import { scoreDeltas } from '../engine/scoring';
@@ -9,8 +20,9 @@ import { type SimState, callerTeamPoints, callerTeamTricks } from './sim';
 
 /**
  * Valutazione della mano per l'asta: per ogni coppia (valore chiamato, seme di briscola)
- * simula molte mani con le carte altrui distribuite a caso, giocando come chiamante,
- * e registra punti e prese della squadra del chiamante.
+ * simula molte mani con le carte altrui distribuite a caso (rispettando, se attiva, la regola
+ * delle mani da almeno 11 punti), giocando come chiamante, e registra punti e prese della
+ * squadra del chiamante.
  */
 export interface BidTable {
   samples: number;
@@ -36,29 +48,51 @@ export const DEFAULT_BIDDING: BiddingParams = {
   policy: { ...DEFAULT_HEURISTIC, noise: 1 },
 };
 
+/** Tentativi massimi per trovare una distribuzione senza mani deboli (in media ne bastano un paio). */
+const MAX_DEAL_TRIES = 200;
+
+/**
+ * Distribuisce a caso le carte che non ho tra gli altri giocatori. Con `noWeakHands` si scartano
+ * le distribuzioni in cui qualcuno ha meno di MIN_HAND_POINTS punti, come farebbe il mazziere.
+ */
+export function sampleOtherHands(
+  hand: readonly Card[],
+  me: number,
+  rand: () => number,
+  noWeakHands = false,
+): Card[][] {
+  const mine = new Set(hand);
+  const others: Card[] = [];
+  for (let c = 0; c < 40; c++) if (!mine.has(c)) others.push(c);
+  let hands: Card[][] = [];
+  for (let attempt = 0; attempt < MAX_DEAL_TRIES; attempt++) {
+    const pool = shuffle(others.slice(), rand);
+    hands = [];
+    let k = 0;
+    for (let q = 0; q < NUM_PLAYERS; q++) {
+      if (q === me) hands.push([...hand]);
+      else hands.push(pool.slice(k, (k += CARDS_PER_PLAYER)));
+    }
+    if (!noWeakHands || hands.every((h, q) => q === me || sumPoints(h) >= MIN_HAND_POINTS)) break;
+  }
+  return hands;
+}
+
 export function buildBidTable(
   hand: readonly Card[],
   me: number,
   dealer: number,
   prm: BiddingParams = DEFAULT_BIDDING,
   rand: () => number = Math.random,
+  noWeakHands = false,
 ): BidTable {
   const n = prm.samples;
   const points = Array.from({ length: 40 }, () => new Int16Array(n));
   const tricks = Array.from({ length: 40 }, () => new Uint8Array(n));
   const solo = Array.from({ length: 40 }, (_, k) => hand.includes(makeCard(k % 4, (k / 4) | 0)));
-  const mine = new Set(hand);
-  const others: Card[] = [];
-  for (let c = 0; c < 40; c++) if (!mine.has(c)) others.push(c);
   const leader = nextPlayer(dealer);
   for (let i = 0; i < n; i++) {
-    const pool = shuffle(others.slice(), rand);
-    const hands: Card[][] = [];
-    let k = 0;
-    for (let q = 0; q < NUM_PLAYERS; q++) {
-      if (q === me) hands.push([...hand]);
-      else hands.push(pool.slice(k, (k += 8)));
-    }
+    const hands = sampleOtherHands(hand, me, rand, noWeakHands);
     for (let rank = 0; rank < 10; rank++) {
       for (let suit = 0; suit < 4; suit++) {
         const called = makeCard(suit, rank);

@@ -57,7 +57,8 @@ function dealHand(config: MatchConfig, dealer: number, deals: number): HandState
     const weak = config.redealWeakHands ? weakHands(cards) : [];
     if (weak.length === 0) {
       const hand = newHandFromCards(dealer, cards);
-      return redeals.length > 0 ? { ...hand, redeals } : hand;
+      if (!config.redealWeakHands) return hand;
+      return redeals.length > 0 ? { ...hand, redealWeakHands: true, redeals } : { ...hand, redealWeakHands: true };
     }
     redeals.push(weak);
   }
